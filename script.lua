@@ -16,9 +16,10 @@ images = {["egg"] = image.load("images/egg.png"),
 		  ["all"] = image.load("images/all.png"),
 		  ["none"] = image.load("images/none.png"),
 		  ["trumpet"] = image.load("images/trumpet.png"),
-		  ["background"] = image.load("images/background.png")
+		  ["background"] = image.load("images/background.png"),
+		  ["sprite"] = image.loadsprite("images/chao.png", 21, 24)
 }
-chao = {["img"] = images["egg"],
+chao = {["img"] = images["sprite"],
 		["x"] = 100,
 		["y"] = 50,
 		["grabbed"] = false,
@@ -34,6 +35,8 @@ chao = {["img"] = images["egg"],
 		["rings"] = 1000,
 		["hunger"] = 0,
 		["move"] = 0,
+		["step"] = 0,
+		["pos"] = 0,
 		["wx"] = 200,
 		["wy"] = 100
 }
@@ -49,6 +52,7 @@ function useItem(item)
 		if chao["belly"] < 10 then
 			chao["belly"] = chao["belly"] + 1
 			chao["mood"] = chao["mood"] + 1
+			chao["pos"] = 2
 			if item["stat"] == "all" then
 				for i = 5, 9 do
 					chao[chaoStats[i]] = chao[chaoStats[i]] + 2
@@ -58,6 +62,7 @@ function useItem(item)
 			end
 		else
 			chao["mood"] = chao["mood"] - 1
+			chao["pos"] = 1
 		end
 		cursor["held"] = nil
 		cursor["img"] = images["cursor"]
@@ -108,6 +113,13 @@ end
 function chaoWander()
 	if (chao["grabbed"] == false and (os.clock() - chao["move"]) > 0.18) then
 		chao["move"] = os.clock()
+		if chao["step"] == 0 then
+			chao["step"] = 1
+		else
+			chao["step"] = 0
+		end
+		oldX = chao["x"]
+		oldY = chao["y"]
 		if chao["x"] ~= chao["wx"] then
 			if chao["x"] < chao["wx"] then
 				chao["x"] = chao["x"] + 1
@@ -122,10 +134,21 @@ function chaoWander()
 				chao["y"] = chao["y"] - 1
 			end
 		end
+		if oldY < chao["y"] then
+			chao["pos"] = 8 + chao["step"]
+		elseif oldY > chao["y"] then
+			chao["pos"] = 10 + chao["step"]
+		elseif oldX < chao["x"] then
+			chao["pos"] = 14 + chao["step"]
+		elseif oldX > chao["x"] then
+			chao["pos"] = 12 + chao["step"]
+		end
 		for i = 3, #drawObjects do
 			if (collide(5, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9) then
 				useItem(drawObjects[i])
-			elseif (collide(50, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9) then
+				break
+			end
+			if (collide(50, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9) then
 				chao["wx"] = drawObjects[i]["x"]
 				chao["wy"] = drawObjects[i]["y"]
 			end
@@ -158,7 +181,11 @@ function render()
 		cursor["held"]["y"] = cursor["y"] + 13
 	end
 	for i = #drawObjects, 1, -1 do
-		image.blit(drawObjects[i]["img"],drawObjects[i]["x"],drawObjects[i]["y"])
+		if drawObjects[i] == chao then
+			image.blitsprite(chao["img"],chao["x"],chao["y"],chao["pos"])
+		else
+			image.blit(drawObjects[i]["img"],drawObjects[i]["x"],drawObjects[i]["y"])
+		end
 	end
 	screen.print(0,1,#drawObjects)
 	screen.flip()

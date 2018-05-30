@@ -1,6 +1,9 @@
 --480x272  240x136
 --os.autofps(60)
-chaoStats = {"name", "age", "mood", "belly", "swim", "fly", "run", "power", "stamina", "rings"}
+chaoStats = {"mood", "belly", "swim", "fly", "run", "power", "stamina"}
+black = color.new(1,1,1)
+grey = color.new(200,200,200)
+beige = color.new(255,218,185)
 items = {"swim", "fly", "run", "power", "stamina", "all", "none", "trumpet"}
 itemCosts = {["swim"] = 30, ["fly"] = 30, ["run"] = 30, ["power"]= 30, ["stamina"] = 40, ["all"] = 100, ["none"] = 100, ["trumpet"] = 500}
 images = {["egg"] = image.load("images/egg.png"),
@@ -22,23 +25,21 @@ images = {["egg"] = image.load("images/egg.png"),
 chao = {["img"] = images["sprite"],
 		["x"] = 100,
 		["y"] = 50,
-		["grabbed"] = false,
+		["wx"] = 200,
+		["wy"] = 100,
 		["name"] = "Chao",
-		["age"] = "Egg",
 		["mood"] = 10,
-		["belly"] = 10,
+		["belly"] = 5,
+		["hunger"] = 0,
 		["swim"] = 0,
 		["fly"] = 0,
 		["run"] = 0,
 		["power"] = 0,
 		["stamina"] = 0,
 		["rings"] = 1000,
-		["hunger"] = 0,
 		["move"] = 0,
 		["step"] = 0,
-		["pos"] = 0,
-		["wx"] = 200,
-		["wy"] = 100
+		["pos"] = 0
 }
 cursor = {["img"] = images["cursor"],
 		  ["x"] = 0,
@@ -46,27 +47,37 @@ cursor = {["img"] = images["cursor"],
 		  ["held"] = nil,
 		  ["timer"] = 0
 }
-drawObjects = {cursor, chao}
+drawObjects = {}
 function useItem(item)
 	if item["stat"] ~= "none" and item["stat"] ~= "trumpet" then
 		if chao["belly"] < 10 then
 			chao["belly"] = chao["belly"] + 1
-			chao["mood"] = chao["mood"] + 1
+			if chao["mood"] < 10 then
+				chao["mood"] = chao["mood"] + 1
+			end
 			chao["pos"] = 2
 			if item["stat"] == "all" then
-				for i = 5, 9 do
+				for i = 3, 7 do
 					chao[chaoStats[i]] = chao[chaoStats[i]] + 2
+					if chao[chaoStats[i]] > 1000 then
+						chao[chaoStats[i]] = 1000
+					end
 				end
 			else
-				chao[item["stat"]] = chao[item["stat"]] + 2
+				chao[item["stat"]] = chao[item["stat"]] + 9
+				if chao[item["stat"]] > 1000 then
+					chao[item["stat"]] = 1000
+				end
 			end
 		else
-			chao["mood"] = chao["mood"] - 1
+			if chao["mood"] > 0 then
+				chao["mood"] = chao["mood"] - 1
+			end
 			chao["pos"] = 1
 		end
 		cursor["held"] = nil
 		cursor["img"] = images["cursor"]
-		for i = 2, #drawObjects do
+		for i = 1, #drawObjects do
 			if drawObjects[i] == item then
 				table.remove(drawObjects, i)
 			end
@@ -96,7 +107,7 @@ function cursorUse()
 				end
 			end
 		else
-			for i = 2, #drawObjects do
+			for i = 1, #drawObjects do
 				if collide(11, cursor["x"], cursor["y"], drawObjects[i]["x"], drawObjects[i]["y"]) then
 					cursor["img"] = images["grab"]
 					cursor["held"] = drawObjects[i]
@@ -111,7 +122,7 @@ function cursorUse()
 	end
 end
 function chaoWander()
-	if (chao["grabbed"] == false and (os.clock() - chao["move"]) > 0.18) then
+	if (os.clock() - chao["move"]) > 0.16 then
 		chao["move"] = os.clock()
 		if chao["step"] == 0 then
 			chao["step"] = 1
@@ -143,12 +154,12 @@ function chaoWander()
 		elseif oldX > chao["x"] then
 			chao["pos"] = 12 + chao["step"]
 		end
-		for i = 3, #drawObjects do
+		for i = 1, #drawObjects do
 			if (collide(5, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9) then
 				useItem(drawObjects[i])
 				break
 			end
-			if (collide(50, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9) then
+			if (collide(50, chao["x"], chao["y"], drawObjects[i]["x"], drawObjects[i]["y"]) and chao["belly"] < 9 and drawObjects[i]["stat"] ~= "none" and drawObjects[i]["stat"] ~= "trumpet") then
 				chao["wx"] = drawObjects[i]["x"]
 				chao["wy"] = drawObjects[i]["y"]
 			end
@@ -169,10 +180,25 @@ end
 function render()
 	screen.clear()
 	image.blit(images["background"],0,0)
-	for i = 1, 10 do
-		screen.print(420, (i * 25) - 5, chao[chaoStats[i]])
+	draw.fillrect(0,0,30,272,beige)
+	screen.print(420, 20, chao["name"], 1, black, beige)
+	for j = 1, 7 do
+		for i = 1, 10 do
+			if i <= chao[chaoStats[j]] % 10 then
+				draw.fillrect(414 + (i * 4), 20 + (j * 25), 3, 3, black)
+			else
+				draw.fillrect(414 + (i * 4), 20 + (j * 25), 3, 3, grey)
+			end
+		end
+		if j > 2 then
+			screen.print(461, 16 + (j * 25), math.floor(chao[chaoStats[j]]/10), 0.5, black, beige)
+			screen.print(420, 25 + (j * 25), chaoStats[j], 0.5, black, beige)
+		else
+			screen.print(420, 25 + (j * 25), chaoStats[j], 0.5, black, beige)
+		end
 	end
-	draw.fillrect(0,0,30,272,color.new(255,218,185))
+	screen.print(420, 215, "rings", 0.5, black, beige)
+	screen.print(420, 230, chao["rings"], 0.5, black, beige)
 	for i = 1, 8 do
 		image.blit(images[items[i]], 10, (i*25)-5)
 	end
@@ -180,13 +206,14 @@ function render()
 		cursor["held"]["x"] = cursor["x"] + 2
 		cursor["held"]["y"] = cursor["y"] + 13
 	end
-	for i = #drawObjects, 1, -1 do
-		if drawObjects[i] == chao then
-			image.blitsprite(chao["img"],chao["x"],chao["y"],chao["pos"])
-		else
-			image.blit(drawObjects[i]["img"],drawObjects[i]["x"],drawObjects[i]["y"])
-		end
+	for i = 1, #drawObjects do
+		image.blit(drawObjects[i]["img"],drawObjects[i]["x"],drawObjects[i]["y"])
 	end
+	image.blitsprite(chao["img"],chao["x"],chao["y"],chao["pos"])
+	if cursor["held"] ~= nil then
+		image.blit(cursor["held"]["img"], cursor["held"]["x"], cursor["held"]["y"])
+	end
+	image.blit(cursor["img"], cursor["x"], cursor["y"])
 	screen.print(0,1,#drawObjects)
 	screen.flip()
 end
@@ -205,9 +232,12 @@ function buttons()
 	if (controls.cross() and (os.clock() - cursor["timer"]) > 0.25) then
 		cursor["timer"] = os.clock()
 		cursorUse()
-	elseif (controls.square() and cursor["held"] ~= nil and chao["grabbed"] == false and collide(15, chao["x"], chao["y"], cursor["held"]["x"], cursor["held"]["y"]) and (os.clock() - cursor["timer"]) > 0.25) then
+	elseif (controls.square() and cursor["held"] ~= nil and collide(15, chao["x"], chao["y"], cursor["held"]["x"], cursor["held"]["y"]) and (os.clock() - cursor["timer"]) > 0.25) then
 		cursor["timer"] = os.clock()
 		useItem(cursor["held"])
+	elseif (controls.circle() and cursor["x"] < 180 and cursor["y"] > 200 and (os.clock() - cursor["timer"]) > 0.25) then
+		cursor["timer"] = os.clock()
+		chao["rings"] = chao["rings"] + math.random(5,50)
 	end
 end
 function game()
@@ -220,7 +250,11 @@ function game()
 		render()
 		if (os.clock() - chao["hunger"]) > 10 then
 			chao["hunger"] = os.clock()
-			chao["belly"] = chao["belly"] - 1
+			if chao["belly"] > 0 then
+				chao["belly"] = chao["belly"] - 1
+			elseif chao["mood"] > 0 then
+				chao["mood"] = chao["mood"] - 1
+			end
 		end
 		chaoWander()
 	end
